@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets"
+        xmlns:tizen="http://tizen.org/ns/widgets"
+        id="http://cheba.tv/ChebaTV"
+        version="1.0.0"
+        viewmodes="maximized">
+  <tizen:application id="chebatv.ChebaTV" package="chebatv" required_version="2.3"/>
+  <tizen:privilege name="http://tizen.org/privilege/internet"/>
+  <tizen:privilege name="http://tizen.org/privilege/power"/>
+  <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+  <tizen:privilege name="http://tizen.org/privilege/unlimitedstorage"/>
+  <content src="index.html"/>
+  <name>ChebaTV</name>
+  <tizen:profile name="tv-samsung-9.0"/>
+  <icon src="icon.png"/>
+  <tizen:metadata key="http://tizen.org/metadata/preferDirtyLaunch" value="true"/>
+  <tizen:metadata key="http://tizen.org/metadata/anonymousNetworkUser" value="true"/>
+</widget>

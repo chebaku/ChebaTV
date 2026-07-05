@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ChebaTV</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0a0a;
+      --surface: #18181b;
+      --surface2: #1f1f23;
+      --border: #2d2d35;
+      --focus: #9147ff;
+      --focus-glow: rgba(145, 71, 255, 0.5);
+      --text: #efeff1;
+      --text2: #adadb8;
+      --text3: #5c5c66;
+      --red: #eb0400;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; overflow: hidden; }
+    body { display: flex; flex-direction: column; }
+
+    /* Focus styles for TV navigation */
+    *:focus { outline: none; }
+    .focused {
+      outline: 3px solid var(--focus) !important;
+      outline-offset: 3px;
+      box-shadow: 0 0 20px var(--focus-glow);
+    }
+
+    /* Top bar */
+    #topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 40px; background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    #logo { font-size: 28px; font-weight: 800; color: var(--focus); letter-spacing: -0.5px; }
+    #logo span { color: var(--text); }
+    #statusbar { font-size: 16px; color: var(--text3); }
+
+    /* Main content */
+    #main {
+      flex: 1; display: flex; flex-direction: column;
+      padding: 30px 40px; overflow-y: auto;
+    }
+
+    /* Channel input section */
+    #input-section { margin-bottom: 30px; }
+    #input-label { font-size: 18px; color: var(--text2); margin-bottom: 12px; }
+    #input-row { display: flex; gap: 16px; align-items: center; }
+    #channel-input {
+      flex: 1; max-width: 600px;
+      padding: 16px 20px; font-size: 24px; background: var(--surface2);
+      border: 2px solid var(--border); border-radius: 8px; color: var(--text);
+      caret-color: var(--focus);
+    }
+    #channel-input::placeholder { color: var(--text3); }
+    #watch-btn {
+      padding: 16px 40px; font-size: 22px; font-weight: 700;
+      background: var(--focus); color: #fff; border: none; border-radius: 8px;
+      cursor: pointer; letter-spacing: 0.5px;
+    }
+    #watch-btn.focused { outline-color: #fff !important; }
+
+    /* Quick channels grid */
+    #section-title { font-size: 18px; color: var(--text2); margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+    #edit-favs-btn { padding: 6px 16px; font-size: 14px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+    #channel-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px; max-height: 380px; overflow-y: auto;
+    }
+    .channel-card {
+      background: var(--surface); border: 2px solid var(--border); border-radius: 8px;
+      padding: 20px; cursor: pointer; text-align: center; transition: all 0.15s;
+    }
+    .channel-card .name { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .channel-card .status { font-size: 13px; color: var(--text3); }
+    .channel-card .fav-star { float: right; font-size: 20px; cursor: pointer; color: var(--text3); }
+    .channel-card .fav-star.active { color: #ffd700; }
+
+    /* Bottom bar */
+    #bottombar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 40px; background: var(--surface); border-top: 1px solid var(--border);
+      font-size: 14px; color: var(--text3);
+    }
+    #help-text span { margin: 0 12px; }
+    #help-text strong { color: var(--text2); }
+    #settings-btn {
+      padding: 8px 20px; font-size: 14px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 4px; color: var(--text2); cursor: pointer;
+    }
+
+    /* Settings overlay */
+    #overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7); z-index: 100;
+      justify-content: center; align-items: center;
+    }
+    #overlay.open { display: flex; }
+    #overlay-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 40px; min-width: 500px; max-width: 600px;
+    }
+    #overlay-box h2 { font-size: 24px; margin-bottom: 24px; color: var(--focus); }
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 0; border-bottom: 1px solid var(--border);
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 18px; }
+    .setting-desc { font-size: 14px; color: var(--text3); margin-top: 4px; }
+    .toggle {
+      width: 60px; height: 32px; background: var(--text3); border-radius: 16px;
+      cursor: pointer; position: relative; transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: var(--focus); }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 26px; height: 26px; background: #fff; border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle.on::after { transform: translateX(28px); }
+    #overlay-close {
+      display: block; margin: 24px auto 0; padding: 12px 40px; font-size: 18px;
+      background: var(--surface2); color: var(--text2); border: 1px solid var(--border);
+      border-radius: 6px; cursor: pointer;
+    }
+    #overlay-close.focused { border-color: var(--focus); }
+
+    /* Empty state */
+    #empty-state { padding: 40px; text-align: center; color: var(--text3); font-size: 16px; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Loading spinner for watch */
+    #loading {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--bg); z-index: 200;
+      justify-content: center; align-items: center; flex-direction: column;
+    }
+    #loading.open { display: flex; }
+    #loading .spinner {
+      width: 60px; height: 60px; border: 4px solid var(--border);
+      border-top-color: var(--focus); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { margin-top: 20px; font-size: 18px; color: var(--text2); }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div id="topbar">
+    <div id="logo">Cheba<span>TV</span></div>
+    <div id="statusbar">Ready</div>
+  </div>
+
+  <!-- Main content -->
+  <div id="main">
+    <div id="input-section">
+      <div id="input-label">Enter channel name</div>
+      <div id="input-row">
+        <input id="channel-input" type="text" placeholder="twitch channel..." maxlength="50">
+        <button id="watch-btn">WATCH</button>
+      </div>
+    </div>
+
+    <div id="section-title">
+      <span>Channels</span>
+      <button id="edit-favs-btn">Edit favorites</button>
+    </div>
+    <div id="channel-grid"></div>
+    <div id="empty-state">No channels yet. Enter a name above and press Watch!</div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div id="bottombar">
+    <div id="help-text">
+      <span><strong>↑↓←→</strong> Navigate</span>
+      <span><strong>Enter</strong> Select</span>
+      <span><strong>Back</strong> Go back</span>
+      <span><strong>Red</strong> Settings</span>
+      <span><strong>Blue</strong> Twitch</span>
+    </div>
+    <button id="settings-btn">Settings</button>
+  </div>
+
+  <!-- Settings overlay -->
+  <div id="overlay">
+    <div id="overlay-box">
+      <h2>Settings</h2>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Disable screen saver</div>
+          <div class="setting-desc">Prevents TV from dimming while watching</div>
+        </div>
+        <div class="toggle on" id="toggle-screensaver"></div>
+      </div>
+      <div class="setting-row" style="cursor:pointer" id="setting-clear-favs">
+        <div>
+          <div class="setting-label" style="color:var(--red)">Clear favorites</div>
+          <div class="setting-desc">Remove all saved channels</div>
+        </div>
+      </div>
+      <button id="overlay-close">Close</button>
+    </div>
+  </div>
+
+  <!-- Loading screen -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Opening Twitch...</p>
+  </div>
+
+  <script>
+    // ===================== STATE =====================
+    var STATE = {
+      channel: '',
+      favorites: [],
+      editingFavs: false,
+      screenSaver: true,
+      focusIndex: 0,
+      focusList: [],
+      overlayOpen: false,
+      swReady: false,
+    };
+
+    // Default suggested channels
+    var DEFAULT_CHANNELS = [
+      'xqc', 'summit1g', 'lirik', 'shroud', 'ninja',
+      'pokimane', 'asmongold', 'sodapoppin', 'lobosjr', 'forsen',
+      'tfue', 'drdisrespect', 'timthetatman', 'ludwig', 'sykkuno',
+      'moistcr1tikal', 'hasanabi', 'trainwreckstv', 'jerma985', 'vinesauce'
+    ];
+
+    // ===================== DOM REFS =====================
+    var $ = function(id) { return document.getElementById(id); };
+    var input = $('channel-input');
+    var watchBtn = $('watch-btn');
+    var grid = $('channel-grid');
+    var emptyState = $('empty-state');
+    var overlay = $('overlay');
+    var overlayClose = $('overlay-close');
+    var toggleSS = $('toggle-screensaver');
+    var settingsBtn = $('settings-btn');
+    var editFavsBtn = $('edit-favs-btn');
+    var statusbar = $('statusbar');
+    var loading = $('loading');
+
+    // ===================== TV KEY HANDLING =====================
+    var KEY = {
+      UP: 38, DOWN: 40, LEFT: 37, RIGHT: 39, ENTER: 13, BACK: 8, EXIT: 27,
+      RED: 108, GREEN: 358, YELLOW: 359, BLUE: 360,
+      COLOR0: 10033, COLOR1: 10034, COLOR2: 10035, COLOR3: 10036,
+    };
+
+    var FOCUSABLES = [];
+
+    function rebuildFocusList() {
+      if (STATE.overlayOpen) {
+        FOCUSABLES = [];
+        var toggles = document.querySelectorAll('#overlay-box .toggle, #overlay-close, #setting-clear-favs');
+        toggles.forEach(function(el) { FOCUSABLES.push(el); });
+      } else {
+        FOCUSABLES = [input, watchBtn, editFavsBtn];
+        var cards = document.querySelectorAll('.channel-card');
+        cards.forEach(function(c) { FOCUSABLES.push(c); });
+        FOCUSABLES.push(settingsBtn);
+      }
+      STATE.focusIndex = 0;
+      updateFocus();
+    }
+
+    function updateFocus() {
+      FOCUSABLES.forEach(function(el, i) {
+        el.classList.toggle('focused', i === STATE.focusIndex);
+      });
+      if (FOCUSABLES[STATE.focusIndex]) {
+        FOCUSABLES[STATE.focusIndex].focus();
+        // Scroll into view
+        FOCUSABLES[STATE.focusIndex].scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function focusNext(dir) {
+      var len = FOCUSABLES.length;
+      if (dir === 'right') {
+        // Move to next row if grid item
+        if (STATE.focusIndex >= 2 && !STATE.overlayOpen) {
+          var cols = window.innerWidth < 600 ? 1 : window.innerWidth < 900 ? 2 : 3;
+          var target = STATE.focusIndex + cols;
+          if (target >= len) target = len - 1;
+          STATE.focusIndex = target;
+        } else {
+          STATE.focusIndex = Math.min(STATE.focusIndex + 1, len - 1);
+        }
+      } else if (dir === 'left') {
+        if (STATE.focusIndex >= 2 && !STATE.overlayOpen) {
+          var cols = window.innerWidth < 600 ? 1 : window.innerWidth < 900 ? 2 : 3;
+          STATE.focusIndex = Math.max(2, STATE.focusIndex - cols);
+        } else {
+          STATE.focusIndex = Math.max(0, STATE.focusIndex - 1);
+        }
+      } else if (dir === 'down') {
+        STATE.focusIndex = Math.min(STATE.focusIndex + 1, len - 1);
+      } else if (dir === 'up') {
+        STATE.focusIndex = Math.max(0, STATE.focusIndex - 1);
+      }
+      updateFocus();
+    }
+
+    function doEnter() {
+      var el = FOCUSABLES[STATE.focusIndex];
+      if (!el) return;
+      el.click();
+    }
+
+    function doBack() {
+      if (STATE.overlayOpen) {
+        closeOverlay();
+      } else if (document.activeElement === input) {
+        input.blur();
+        rebuildFocusList();
+      }
+    }
+
+    // ===================== REGISTER TIZEN KEYS =====================
+    function registerTizenKeys() {
+      try {
+        if (typeof tizen !== 'undefined' && tizen.tvinputdevice) {
+          var keys = [
+            'ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue',
+            'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Back'
+          ];
+          keys.forEach(function(k) {
+            try { tizen.tvinputdevice.registerKey(k); } catch(e) {}
+          });
+        }
+      } catch(e) {}
+    }
+
+    // ===================== KEYBOARD/TV INPUT =====================
+    document.addEventListener('keydown', function(e) {
+      // Handle TV keys
+      if (e.keyCode === KEY.RED || e.keyCode === KEY.COLOR0) {
+        e.preventDefault();
+        if (!STATE.overlayOpen) openOverlay();
+        return;
+      }
+      if (e.keyCode === KEY.BLUE || e.keyCode === KEY.COLOR3) {
+        e.preventDefault();
+        watchCurrentChannel();
+        return;
+      }
+
+      if (STATE.overlayOpen) {
+        if (e.keyCode === KEY.ENTER) { e.preventDefault(); doEnter(); return; }
+        if (e.keyCode === KEY.BACK || e.keyCode === KEY.EXIT || e.keyCode === 27) { e.preventDefault(); closeOverlay(); return; }
+        if (e.keyCode === KEY.UP) { e.preventDefault(); focusNext('up'); return; }
+        if (e.keyCode === KEY.DOWN) { e.preventDefault(); focusNext('down'); return; }
+        return;
+      }
+
+      if (e.keyCode === KEY.BACK || e.keyCode === KEY.EXIT || e.keyCode === 27) {
+        e.preventDefault();
+        doBack();
+        return;
+      }
+      if (e.keyCode === KEY.ENTER) {
+        // Don't intercept if input is focused (let the TV OSK work)
+        if (document.activeElement !== input) {
+          e.preventDefault();
+          doEnter();
+        }
+        return;
+      }
+      if (e.keyCode === KEY.UP) { e.preventDefault(); focusNext('up'); return; }
+      if (e.keyCode === KEY.DOWN) { e.preventDefault(); focusNext('down'); return; }
+      if (e.keyCode === KEY.LEFT) { e.preventDefault(); focusNext('left'); return; }
+      if (e.keyCode === KEY.RIGHT) { e.preventDefault(); focusNext('right'); return; }
+    });
+
+    // ===================== CHANNEL GRID =====================
+    function renderGrid() {
+      grid.innerHTML = '';
+      var channels = STATE.favorites.length > 0 ? STATE.favorites : DEFAULT_CHANNELS;
+      emptyState.style.display = channels.length === 0 ? 'block' : 'none';
+
+      channels.forEach(function(ch) {
+        if (!ch) return;
+        var card = document.createElement('div');
+        card.className = 'channel-card';
+        card.tabIndex = -1;
+        var isFav = STATE.favorites.indexOf(ch) >= 0;
+        var star = '';
+        if (STATE.favorites.length > 0) {
+          star = '<div class="fav-star' + (isFav ? ' active' : '') + '" data-fav="' + ch + '">★</div>';
+        }
+        card.innerHTML = star + '<div class="name">' + ch + '</div><div class="status">twitch.tv/' + ch + '</div>';
+        card.addEventListener('click', function() {
+          STATE.channel = ch;
+          watchChannel(ch);
+        });
+        if (star) {
+          var starEl = card.querySelector('.fav-star');
+          starEl.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleFavorite(ch);
+          });
+        }
+        grid.appendChild(card);
+      });
+      rebuildFocusList();
+    }
+
+    function toggleFavorite(ch) {
+      var idx = STATE.favorites.indexOf(ch);
+      if (idx >= 0) {
+        STATE.favorites.splice(idx, 1);
+      } else {
+        STATE.favorites.push(ch);
+      }
+      saveFavorites();
+      renderGrid();
+    }
+
+    // ===================== FAVORITES =====================
+    function loadFavorites() {
+      try {
+        var saved = localStorage.getItem('chebatv_favorites');
+        if (saved) STATE.favorites = JSON.parse(saved);
+      } catch(e) {}
+    }
+
+    function saveFavorites() {
+      try {
+        localStorage.setItem('chebatv_favorites', JSON.stringify(STATE.favorites));
+      } catch(e) {}
+    }
+
+    // ===================== SETTINGS =====================
+    function loadSettings() {
+      try {
+        var ss = localStorage.getItem('chebatv_screensaver');
+        if (ss !== null) STATE.screenSaver = ss === 'true';
+      } catch(e) {}
+      updateToggle();
+      applyScreenSaver();
+    }
+
+    function saveSettings() {
+      try {
+        localStorage.setItem('chebatv_screensaver', STATE.screenSaver.toString());
+      } catch(e) {}
+    }
+
+    function updateToggle() {
+      toggleSS.classList.toggle('on', STATE.screenSaver);
+    }
+
+    function applyScreenSaver() {
+      try {
+        if (typeof tizen !== 'undefined' && tizen.power) {
+          if (STATE.screenSaver) {
+            tizen.power.request('SCREEN', 'SCREEN_NORMAL');
+          } else {
+            tizen.power.release('SCREEN');
+          }
+        }
+      } catch(e) {}
+    }
+
+    function openOverlay() {
+      STATE.overlayOpen = true;
+      overlay.classList.add('open');
+      rebuildFocusList();
+    }
+
+    function closeOverlay() {
+      STATE.overlayOpen = false;
+      overlay.classList.remove('open');
+      rebuildFocusList();
+    }
+
+    // ===================== SCREEN SAVER (interval backup) =====================
+    var saverInterval = null;
+    function startSaverInterval() {
+      if (saverInterval) clearInterval(saverInterval);
+      saverInterval = setInterval(function() {
+        if (STATE.screenSaver) applyScreenSaver();
+      }, 60000);
+    }
+
+    // ===================== WATCH CHANNEL =====================
+    function watchChannel(ch) {
+      if (!ch || !ch.trim()) return;
+      STATE.channel = ch.trim();
+      loading.classList.add('open');
+      statusbar.textContent = 'Opening ' + STATE.channel + '...';
+
+      // Register SW, then navigate
+      navigateToTwitch(STATE.channel);
+    }
+
+    function watchCurrentChannel() {
+      var ch = input.value.trim();
+      if (!ch) {
+        ch = STATE.favorites[0] || DEFAULT_CHANNELS[0] || '';
+      }
+      if (ch) watchChannel(ch);
+    }
+
+    // ===================== SW + NAVIGATION =====================
+    function navigateToTwitch(channel) {
+      // Try registering SW first, then redirect
+      var doRedirect = function() {
+        var url = 'https://www.twitch.tv/' + encodeURIComponent(channel);
+        window.location.href = url;
+      };
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js', { scope: '/' }).then(function() {
+          return navigator.serviceWorker.ready;
+        }).then(function() {
+          STATE.swReady = true;
+          statusbar.textContent = 'SW ready, launching...';
+          doRedirect();
+        }).catch(function() {
+          statusbar.textContent = 'SW unavailable, launching without addons';
+          // Still redirect - user can watch without addons
+          doRedirect();
+        });
+      } else {
+        statusbar.textContent = 'SW not supported, launching browser';
+        launchInBrowser(channel);
+      }
+    }
+
+    function launchInBrowser(channel) {
+      var url = 'https://www.twitch.tv/' + encodeURIComponent(channel);
+      try {
+        if (typeof tizen !== 'undefined' && tizen.application) {
+          var appControl = new tizen.ApplicationControl(
+            'http://tizen.org/appcontrol/operation/view', url, null, null
+          );
+          tizen.application.launchAppControl(appControl, null, function() {
+            statusbar.textContent = 'Launched in browser';
+            loading.classList.remove('open');
+          }, function(e) {
+            statusbar.textContent = 'Browser launch failed, trying redirect';
+            window.location.href = url;
+          });
+        } else {
+          window.location.href = url;
+        }
+      } catch(e) {
+        window.location.href = url;
+      }
+    }
+
+    // ===================== EVENT LISTENERS =====================
+    watchBtn.addEventListener('click', function() {
+      watchCurrentChannel();
+    });
+
+    input.addEventListener('keydown', function(e) {
+      if (e.keyCode === 13) watchCurrentChannel();
+    });
+
+    settingsBtn.addEventListener('click', openOverlay);
+
+    overlayClose.addEventListener('click', closeOverlay);
+
+    toggleSS.addEventListener('click', function() {
+      STATE.screenSaver = !STATE.screenSaver;
+      updateToggle();
+      saveSettings();
+      applyScreenSaver();
+    });
+
+    editFavsBtn.addEventListener('click', function() {
+      // Toggle edit mode: when in edit mode, clicking cards toggles favorites
+      if (STATE.favorites.length === 0) {
+        // First click: copy default channels to favorites
+        STATE.favorites = DEFAULT_CHANNELS.slice();
+        saveFavorites();
+        renderGrid();
+      }
+      STATE.editingFavs = !STATE.editingFavs;
+      editFavsBtn.textContent = STATE.editingFavs ? 'Done editing' : 'Edit favorites';
+      if (!STATE.editingFavs) return;
+      // Replace card click behavior temporarily
+    });
+
+    // Setting: clear favorites
+    $('setting-clear-favs').addEventListener('click', function() {
+      STATE.favorites = [];
+      saveFavorites();
+      renderGrid();
+      closeOverlay();
+    });
+
+    // ===================== INIT =====================
+    function init() {
+      registerTizenKeys();
+      loadFavorites();
+      loadSettings();
+      renderGrid();
+      rebuildFocusList();
+      startSaverInterval();
+
+      // Focus input when app starts
+      setTimeout(function() {
+        input.focus();
+      }, 500);
+
+      statusbar.textContent = 'Ready — ' + (STATE.favorites.length > 0 ? STATE.favorites.length + ' favorites' : 'default channels');
+    }
+
+    init();
+  </script>
+</body>
+</html>
